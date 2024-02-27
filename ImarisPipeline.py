@@ -1,7 +1,7 @@
 """
 Imaris Image Processing Pipeline
 Author: Armaan Hajar and Chandler Asnes
-Date: 2/5/23
+Date: 2/26/24
 """
 
 import pyautogui as auto
@@ -29,6 +29,19 @@ def launch_app():
     tm.sleep(0.5)
     auto.press("enter")
 
+def float_input(message: str):
+    while True:
+        x = input(message)
+        try:
+            return float(x)
+        except ValueError:
+            print("Please enter a valid number! (ex. 1 or 1.1)")
+
+def y_or_n(char: str):
+    while char.lower() not in ['y', 'n']:
+        char = input("Invalid input. Please enter 'y' or 'n': ")
+    return char.lower() == 'y'
+
 def save_statistics(excel_file_path):
     find("statistics.png") # Press "Statistics" (mini graph)
     try_until_found("exportstatistics.png", .9) # Press "Export all Statistics to File" (several floppy disks)
@@ -46,7 +59,7 @@ def save_statistics(excel_file_path):
     auto.press('enter')
     tm.sleep(0.5)
     find("save.png")
-    tm.sleep(2)
+    tm.sleep(3)
     auto.hotkey('alt', 'f4')
 
 def open_next_file():
@@ -146,22 +159,23 @@ def processing(excel_file_path):
     open_vscode()
     print("----------------------------------------------------------------")
     print("Select the Diameter of Largest Sphere Which Fits into the Object")
-    diam_of_lar_sphere.append(float(input("What Did You Input?: ")))
+    diam_of_lar_sphere.append(float_input("What Did You Input?: "))
+    # maybe add section where it automatically types in the number so you don't need to type it twice
     tm.sleep(2)
     find("nextbutton.png")  # Presses Blue next page button
     tm.sleep(2)
     open_vscode()
     print("----------------------------------------------------------------")
     print("Select the Threshold (Background Subtraction)")
-    background_threshold.append(float(input("What Did You Input?: ")))
+    background_threshold.append(float_input("What Did You Input?: "))
     tm.sleep(2)
     find("nextbutton.png")  # Presses Blue next page button    
     tm.sleep(0.5)
     open_vscode()
     print("----------------------------------------------------------------")
     print("Adjust the Filter")
-    adj_filter.append(str((float(input("What Did You Input For the Minimum?: ")),
-                           float(input("What Did You Input For the Maximum? (if no change, input 0): ")))))
+    adj_filter.append(str((float_input("What Did You Input For the Minimum?: "),
+                           float_input("What Did You Input For the Maximum? (if no change, input 0): "))))
     tm.sleep(2)
     find("greennextbutton.png")  # Presses Green next page button
     tm.sleep(2)
@@ -203,15 +217,15 @@ def processing(excel_file_path):
     open_vscode()
     print("----------------------------------------------------------------")
     print("Input The Estimated Largest Diameter")
-    est_larg_diam.append(float(input("What Did You Input For the Estimated Largest Diameter?: ")))
+    est_larg_diam.append(float_input("What Did You Input For the Estimated Largest Diameter?: "))
     tm.sleep(2)
     find("nextbutton.png")  # Presses Blue next page button    
     tm.sleep(2)
     open_vscode()
     print("----------------------------------------------------------------")
     print("Set the Starting Points Threshold")
-    start_point_thres.append(str((float(input("What Did You Input For the Minimum?: ")),
-                                  float(input("What Did You Input For the Maximum?: ")))))
+    start_point_thres.append(str((float_input("What Did You Input For the Minimum?: "),
+                                  float_input("What Did You Input For the Maximum?: "))))
     tm.sleep(2)
     find("calculatesomamodel.png") # Uncheck Calculate Soma Model
     tm.sleep(0.5)
@@ -230,13 +244,13 @@ def processing(excel_file_path):
     print("Adjust the Seed Points Threshold")
     while satisfied == False:
         open_vscode()
-        temp_spt = float(input("What Did You Input For the Seed Points Threshold?: "))
+        temp_spt = float_input("What Did You Input For the Seed Points Threshold?: ")
         tm.sleep(0.5)
         find("nextbutton.png")  # Presses Blue next page button    
         tm.sleep(4)
         open_vscode()
         print("----------------------------------------------------------------")
-        if input("Are You Satitsfied with the Results? (y/n): ") == 'n':
+        if y_or_n("Are You Satitsfied with the Results? (y/n): "):
             find("backbutton.png") # Presses back button
             print("Readjust the Seed Points Threshold")
         else:
@@ -285,12 +299,14 @@ def batch(excel_file_path):
             file_names.append(file_name)
             processing(excel_file_path)
             open_vscode()
-            if i == len(folder):
+            if i == len(folder) - 1:
                 print("Thank you")
+                # save file
+                # close Imaris
                 save_to_excel(excel_file_path)
                 exit()
             else:
-                if input("Want to Continue to the Next File? (y/n): ") == 'y':
+                if y_or_n("Want to Continue to the Next File? (y/n): "):
                     open_next_file()
                     tm.sleep(1)
                     done_with_file(file)
@@ -303,21 +319,27 @@ def batch(excel_file_path):
 
 def main():
     print("----------------------------------------------------------------")
-    if input("Is Imaris Running? (y/n): ") == 'n':
+    if not y_or_n("Is Imaris Running? (y/n): "):
         launch_app()
         print("Please Full Screen the Imaris Application")
 
-    if input("Is Imaris Full Screen? (y/n): ") == 'n':
+    if not y_or_n("Is Imaris Full Screen? (y/n): "):
         print("Please Restart the Script and Full Screen Imaris")
         exit()
 
-    if input("Have You Selected Your Preferred Statistics? (y/n): ")  == 'n':
+    if not y_or_n("Have You Selected Your Preferred Statistics? (y/n): "):
         print("Please Selected Your Preferred Statistics And Restart the Script")
         exit()
 
     excel_file_path = str(input("What is the Name of the Folder You Would Like to Save the Excel Data To?: "))
+    path_exists = False
+    folders = os.listdir(dest_excel_files)
     path = os.path.join(dest_excel_files, excel_file_path)
-    os.mkdir(path)
+    for folder in folders:
+        if excel_file_path == folder:
+            path_exists = True
+    if not path_exists:
+        os.mkdir(path)
     batch(excel_file_path)
 
 if __name__ == "__main__":
