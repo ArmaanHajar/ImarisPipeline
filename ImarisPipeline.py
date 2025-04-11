@@ -1,46 +1,24 @@
 """
 Imaris Image Processing Pipeline
 Author: Armaan Hajar and Chandler Asnes
-Date: 2/26/24
+Date: 4/11/25
 """
+
+from assisted_functions import y_or_n, float_input, select_folder
+from export_to_excel import save_to_excel
+from check_libraries import check
 
 import pyautogui as auto
 import time as tm
 import os
 import shutil
-from xlwt import Workbook
 
-source_folder = r'D:\Chandler\Raw Imaris Files'
-destination_folder = r'D:\Chandler\Processed Imaris Files'
-dest_excel_files = r'D:\Chandler\Exported Excel Data'
+source_folder = select_folder("Select the Source Folder")
+destination_folder = select_folder("Select the Destination Folder for the Processed Images")
+dest_excel_files = select_folder("Select the Destination Folder for the Excel Data")
 path = ""
-file_names = [] # Names of current file pipeline is working on
-diam_of_lar_sphere = [] # Diameter of largest Sphere which fits into the Object
-background_threshold = [] # Threshold (Background Subtraction)
-adj_filter = [] # Adjust Filter
-est_larg_diam = [] # Estimated Largest Diameter
-start_point_thres = [] # Starting Points Threshold
-seed_points_threshold = [] # Seed Points Threshold
 
-def launch_app():
-    auto.press("win")
-    tm.sleep(0.5)
-    auto.typewrite("Imaris 10.1")
-    tm.sleep(0.5)
-    auto.press("enter")
-
-def float_input(message: str):
-    while True:
-        x = input(message)
-        try:
-            return float(x)
-        except ValueError:
-            print("Please enter a valid number! (ex. 1 or 1.1)")
-
-def y_or_n(char: str):
-    while char.lower() not in ['y', 'n']:
-        char = input("Invalid input. Please enter 'y' or 'n': ")
-    return char.lower() == 'y'
+from shared_data import file_names, diam_of_lar_sphere, background_threshold, adj_filter, est_larg_diam, start_point_thres, seed_points_threshold
 
 def save_statistics(excel_file_path):
     find("statistics.png") # Press "Statistics" (mini graph)
@@ -62,6 +40,13 @@ def save_statistics(excel_file_path):
     tm.sleep(3)
     auto.hotkey('alt', 'f4')
 
+def launch_app():
+    auto.press("win")
+    tm.sleep(0.5)
+    auto.typewrite("Imaris 10.1")
+    tm.sleep(0.5)
+    auto.press("enter")
+
 def open_next_file():
     find("openfolder.png")
     tm.sleep(0.5)
@@ -76,7 +61,7 @@ def try_until_found(looking: str, ci: float, count = 0):
         print("Unable to Find")
         return
 
-    path = r'D:\Chandler\Imairs Pipeline\Button Images'
+    path = r'D:\Chandler\Imairs Pipeline\Button Images' # <--------------------------------------------- file name usage
     full_path = os.path.join(path, looking)
 
     try:
@@ -97,7 +82,7 @@ def find(button_name: str, ci = 1.0):
         print("Button not found")
         return
 
-    path = r'D:\Chandler\Imairs Pipeline\Button Images'
+    path = r'D:\Chandler\Imairs Pipeline\Button Images' # <--------------------------------------------- file name usage
     full_path = os.path.join(path, button_name)
 
     try:
@@ -120,7 +105,7 @@ def find(button_name: str, ci = 1.0):
         find(button_name, ci - 0.01)
 
 def open_vscode():
-    path = r'D:\Chandler\Imairs Pipeline\Button Images'
+    path = r'D:\Chandler\Imairs Pipeline\Button Images' # <--------------------------------------------- file name usage
     os.chdir(path)
 
     try:
@@ -132,7 +117,7 @@ def open_vscode():
     auto.click(center)
 
 def processing(excel_file_path):
-    path = r'D:\Chandler\Imairs Pipeline\Button Images'
+    path = r'D:\Chandler\Imairs Pipeline\Button Images' # <--------------------------------------------- file name usage
     os.chdir(path)
 
     satisfied = False
@@ -266,25 +251,6 @@ def done_with_file(current_file):
     new_dest = destination_folder + f"\{current_file}"
     shutil.move(old_dest, new_dest)
 
-def save_to_excel(excel_file_path):
-    path = f"D:\Chandler\Exported Excel Data\{excel_file_path}"
-    os.chdir(path)
-
-    wb = Workbook()
-    user_input_sheet = wb.add_sheet('Data')
-    names = ['File Name', 'Diameter of Largest Sphere', 'Threshold (Background Subtraction)', 'Adjust Filter',
-            'Estimated Largest Diameter', 'Starting Points Threshold', 'Seed Points Threshold']
-    i_hate_myself = [file_names, diam_of_lar_sphere, background_threshold, adj_filter,
-                     est_larg_diam, start_point_thres, seed_points_threshold]
-    
-    for i in range(len(names)):
-        user_input_sheet.write(0, i, names[i])
-    for i in range(len(i_hate_myself)):
-        for j in range(len(file_names)):
-            user_input_sheet.write(j+1, i, i_hate_myself[i][j])
-
-    wb.save(f"{excel_file_path}.xls")
-
 def batch(excel_file_path):
     folder = os.listdir(source_folder)
     input("Please Open The First File You Would Like to Process Then Hit Enter ")
@@ -318,7 +284,13 @@ def batch(excel_file_path):
     save_to_excel(excel_file_path)
 
 def main():
-    print("----------------------------------------------------------------")
+
+    check()
+
+    print("-------------------------------------------------------------")
+    print("          Imaris Pipeline (Created by Armaan Hajar)          ")
+    print("-------------------------------------------------------------")
+
     if not y_or_n("Is Imaris Running? (y/n): "):
         launch_app()
         print("Please Full Screen the Imaris Application")
