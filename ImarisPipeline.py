@@ -4,18 +4,20 @@ Author: Armaan Hajar and Chandler Asnes
 Date: 4/11/25
 """
 
-from assisted_functions import y_or_n, float_input, select_folder
+from input_validation import y_or_n, float_input
 from export_to_excel import save_to_excel
-from check_libraries import check
+from check_dependencies import check_packages, check_folders
 
 import pyautogui as auto
 import time as tm
 import os
 import shutil
 
-source_folder = select_folder("Select the Source Folder")
-destination_folder = select_folder("Select the Destination Folder for the Processed Images")
-dest_excel_files = select_folder("Select the Destination Folder for the Excel Data")
+current_directory = os.getcwd()
+
+source_folder = os.path.join(current_directory, 'Raw Images')
+destination_folder = os.path.join(current_directory, 'Processed Images')
+excel_files_folder = os.path.join(destination_folder, 'Excel Files')
 path = ""
 
 from shared_data import file_names, diam_of_lar_sphere, background_threshold, adj_filter, est_larg_diam, start_point_thres, seed_points_threshold
@@ -61,7 +63,7 @@ def try_until_found(looking: str, ci: float, count = 0):
         print("Unable to Find")
         return
 
-    path = r'D:\Chandler\Imairs Pipeline\Button Images' # <--------------------------------------------- file name usage
+    path = os.path.join(current_directory, 'Button Images')
     full_path = os.path.join(path, looking)
 
     try:
@@ -82,11 +84,10 @@ def find(button_name: str, ci = 1.0):
         print("Button not found")
         return
 
-    path = r'D:\Chandler\Imairs Pipeline\Button Images' # <--------------------------------------------- file name usage
-    full_path = os.path.join(path, button_name)
+    path = os.path.join(current_directory, 'Button Images', button_name)
 
     try:
-        location = auto.locateOnScreen(full_path, confidence=ci)
+        location = auto.locateOnScreen(path, confidence=ci)
         if location:
             if button_name == 'thinnestdiameter.png': # Triple Click "Thinnest Diameter"
                 x_ = location.left - 20
@@ -105,7 +106,7 @@ def find(button_name: str, ci = 1.0):
         find(button_name, ci - 0.01)
 
 def open_vscode():
-    path = r'D:\Chandler\Imairs Pipeline\Button Images' # <--------------------------------------------- file name usage
+    path = os.path.join(current_directory, 'Button Images')
     os.chdir(path)
 
     try:
@@ -117,7 +118,7 @@ def open_vscode():
     auto.click(center)
 
 def processing(excel_file_path):
-    path = r'D:\Chandler\Imairs Pipeline\Button Images' # <--------------------------------------------- file name usage
+    path = os.path.join(current_directory, 'Button Images')
     os.chdir(path)
 
     satisfied = False
@@ -235,7 +236,7 @@ def processing(excel_file_path):
         tm.sleep(4)
         open_vscode()
         print("----------------------------------------------------------------")
-        if y_or_n("Are You Satitsfied with the Results? (y/n): "):
+        if y_or_n("Are You Satitsfied with the Results?"):
             find("backbutton.png") # Presses back button
             print("Readjust the Seed Points Threshold")
         else:
@@ -247,8 +248,8 @@ def processing(excel_file_path):
     save_statistics(excel_file_path)
 
 def done_with_file(current_file):
-    old_dest = source_folder + f"\{current_file}"
-    new_dest = destination_folder + f"\{current_file}"
+    old_dest = os.path.join(source_folder, current_file)
+    new_dest = os.path.join(destination_folder, current_file)
     shutil.move(old_dest, new_dest)
 
 def batch(excel_file_path):
@@ -272,7 +273,7 @@ def batch(excel_file_path):
                 save_to_excel(excel_file_path)
                 exit()
             else:
-                if y_or_n("Want to Continue to the Next File? (y/n): "):
+                if y_or_n("Want to Continue to the Next File?"):
                     open_next_file()
                     tm.sleep(1)
                     done_with_file(file)
@@ -284,35 +285,26 @@ def batch(excel_file_path):
     save_to_excel(excel_file_path)
 
 def main():
-
-    check()
-
     print("-------------------------------------------------------------")
     print("          Imaris Pipeline (Created by Armaan Hajar)          ")
     print("-------------------------------------------------------------")
 
-    if not y_or_n("Is Imaris Running? (y/n): "):
-        launch_app()
-        print("Please Full Screen the Imaris Application")
+    check_packages()  # Check if required libraries are installed
+    check_folders()  # Check if required folders exist
 
-    if not y_or_n("Is Imaris Full Screen? (y/n): "):
-        print("Please Restart the Script and Full Screen Imaris")
+    if not y_or_n("Is Imaris Running and Full Screen?"):
+        print("Please Open and Full Screen the Imaris Application")
         exit()
 
-    if not y_or_n("Have You Selected Your Preferred Statistics? (y/n): "):
+    if not y_or_n("Are Your Unprocessed Images in the 'Raw Images' Folder?"):
+        print("Please Put the Unprocessed Images in the 'Raw Images' Folder")
+        exit()
+
+    if not y_or_n("Have You Selected Your Preferred Statistics?"):
         print("Please Selected Your Preferred Statistics And Restart the Script")
         exit()
-
-    excel_file_path = str(input("What is the Name of the Folder You Would Like to Save the Excel Data To?: "))
-    path_exists = False
-    folders = os.listdir(dest_excel_files)
-    path = os.path.join(dest_excel_files, excel_file_path)
-    for folder in folders:
-        if excel_file_path == folder:
-            path_exists = True
-    if not path_exists:
-        os.mkdir(path)
-    batch(excel_file_path)
+        
+    batch(excel_files_folder)
 
 if __name__ == "__main__":
     main()
